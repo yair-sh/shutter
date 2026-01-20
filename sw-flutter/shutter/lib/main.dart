@@ -80,46 +80,12 @@ class _ShutterHomePageState extends State<ShutterHomePage>
     super.dispose();
   }
 
-  // Future<void> _startScan() async {
-  //   setState(() {
-  //     _isScanning = true;
-  //     _statusText = 'Scanning...';
-  //   });
-
-  //   FlutterBluePlus.startScan(timeout: const Duration(seconds: 4));
-
-  //   FlutterBluePlus.scanResults.listen((results) {
-  //     for (ScanResult r in results) {
-  //       if (kDebugMode) {
-  //         print('scan res: $r');
-  //       }
-
-  //       // Look for your ESP32 device by name or service UUID
-  //       if (r.device.platformName.contains('ESP32') ||
-  //           r.device.platformName.contains('Shutter')) {
-  //         _connectToDevice(r.device);
-  //         FlutterBluePlus.stopScan();
-  //         break;
-  //       }
-  //     }
-  //   });
-
-  //   await Future.delayed(const Duration(seconds: 4));
-  //   if (!_isConnected) {
-  //     setState(() {
-  //       _isScanning = false;
-  //       _statusText = 'No device found';
-  //     });
-  //   }
-  // }
-
   Future<void> _startScan() async {
     setState(() {
       _isScanning = true;
       _statusText = 'Requesting permissions...';
     });
 
-    // Request permissions
     Map<Permission, PermissionStatus> statuses = await [
       Permission.bluetoothScan,
       Permission.bluetoothConnect,
@@ -147,7 +113,6 @@ class _ShutterHomePageState extends State<ShutterHomePage>
         }
 
         final name = r.device.platformName.toLowerCase();
-        // Look for your ESP32 device by name
         if (name.contains('nimble') ||
             name.contains('esp32') ||
             name.contains('shutter') ||
@@ -178,7 +143,6 @@ class _ShutterHomePageState extends State<ShutterHomePage>
         _statusText = 'Connected to ${device.platformName}';
       });
 
-      // Discover services
       List<BluetoothService> services = await device.discoverServices();
       for (var service in services) {
         for (var char in service.characteristics) {
@@ -215,16 +179,16 @@ class _ShutterHomePageState extends State<ShutterHomePage>
 
   void _onUpPressed() {
     _upArrowController.forward().then((_) => _upArrowController.reverse());
-    _sendCommand([0x01]); // Command for UP
+    _sendCommand([0x01]);
   }
 
   void _onDownPressed() {
     _downArrowController.forward().then((_) => _downArrowController.reverse());
-    _sendCommand([0x02]); // Command for DOWN
+    _sendCommand([0x02]);
   }
 
   void _onStopPressed() {
-    _sendCommand([0x00]); // Command for STOP
+    _sendCommand([0x00]);
   }
 
   @override
@@ -235,9 +199,7 @@ class _ShutterHomePageState extends State<ShutterHomePage>
           children: [
             _buildHeader(),
             _buildStatusCard(),
-            const Spacer(),
-            _buildControlPanel(),
-            const Spacer(),
+            Expanded(child: _buildControlPanel()),
             _buildBottomBar(),
           ],
         ),
@@ -247,7 +209,7 @@ class _ShutterHomePageState extends State<ShutterHomePage>
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -341,7 +303,7 @@ class _ShutterHomePageState extends State<ShutterHomePage>
         animation: _pulseController,
         builder: (context, child) {
           return Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: const Color(0xFF18181B),
               borderRadius: BorderRadius.circular(20),
@@ -385,7 +347,7 @@ class _ShutterHomePageState extends State<ShutterHomePage>
                         : Colors.grey[600],
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -439,56 +401,65 @@ class _ShutterHomePageState extends State<ShutterHomePage>
   }
 
   Widget _buildControlPanel() {
-    return Column(
-      children: [
-        // UP Button
-        _buildArrowButton(
-          icon: Icons.keyboard_arrow_up_rounded,
-          label: 'OPEN',
-          controller: _upArrowController,
-          onPressed: _onUpPressed,
-          gradientColors: const [Color(0xFF6366F1), Color(0xFF818CF8)],
-          isUp: true,
-        ),
-        const SizedBox(height: 12),
-        // STOP Button
-        GestureDetector(
-          onTap: _onStopPressed,
-          child: Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFF27272A),
-              border: Border.all(color: const Color(0xFF3F3F46), width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 15,
-                  offset: const Offset(0, 5),
-                ),
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableHeight = constraints.maxHeight;
+        final buttonHeight = (availableHeight * 0.32).clamp(60.0, 120.0);
+        final stopButtonSize = (availableHeight * 0.22).clamp(50.0, 80.0);
+        final spacing = (availableHeight * 0.05).clamp(8.0, 20.0);
+
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildArrowButton(
+              icon: Icons.keyboard_arrow_up_rounded,
+              label: 'OPEN',
+              controller: _upArrowController,
+              onPressed: _onUpPressed,
+              gradientColors: const [Color(0xFF6366F1), Color(0xFF818CF8)],
+              isUp: true,
+              height: buttonHeight,
             ),
-            child: const Center(
-              child: Icon(
-                Icons.stop_rounded,
-                size: 36,
-                color: Color(0xFFFAFAFA),
+            SizedBox(height: spacing),
+            GestureDetector(
+              onTap: _onStopPressed,
+              child: Container(
+                width: stopButtonSize,
+                height: stopButtonSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF27272A),
+                  border: Border.all(color: const Color(0xFF3F3F46), width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.stop_rounded,
+                    size: stopButtonSize * 0.45,
+                    color: const Color(0xFFFAFAFA),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        // DOWN Button
-        _buildArrowButton(
-          icon: Icons.keyboard_arrow_down_rounded,
-          label: 'CLOSE',
-          controller: _downArrowController,
-          onPressed: _onDownPressed,
-          gradientColors: const [Color(0xFF22D3EE), Color(0xFF06B6D4)],
-          isUp: false,
-        ),
-      ],
+            SizedBox(height: spacing),
+            _buildArrowButton(
+              icon: Icons.keyboard_arrow_down_rounded,
+              label: 'CLOSE',
+              controller: _downArrowController,
+              onPressed: _onDownPressed,
+              gradientColors: const [Color(0xFF22D3EE), Color(0xFF06B6D4)],
+              isUp: false,
+              height: buttonHeight,
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -499,7 +470,10 @@ class _ShutterHomePageState extends State<ShutterHomePage>
     required VoidCallback onPressed,
     required List<Color> gradientColors,
     bool isUp = true,
+    double height = 120,
   }) {
+    final width = height * 1.33;
+
     return GestureDetector(
       onTap: _isConnected ? onPressed : null,
       child: AnimatedBuilder(
@@ -509,19 +483,18 @@ class _ShutterHomePageState extends State<ShutterHomePage>
           return Transform.scale(
             scale: scale,
             child: SizedBox(
-              width: 160,
-              height: 120,
+              width: width,
+              height: height,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Outer glow
                   if (_isConnected)
                     Positioned(
-                      top: isUp ? null : 20,
-                      bottom: isUp ? 20 : null,
+                      top: isUp ? null : height * 0.17,
+                      bottom: isUp ? height * 0.17 : null,
                       child: Container(
-                        width: 80,
-                        height: 40,
+                        width: width * 0.5,
+                        height: height * 0.33,
                         decoration: BoxDecoration(
                           boxShadow: [
                             BoxShadow(
@@ -533,9 +506,8 @@ class _ShutterHomePageState extends State<ShutterHomePage>
                         ),
                       ),
                     ),
-                  // Arrow shape
                   CustomPaint(
-                    size: const Size(160, 100),
+                    size: Size(width, height * 0.83),
                     painter: ArrowPainter(
                       isUp: isUp,
                       gradientColors: _isConnected
@@ -544,14 +516,13 @@ class _ShutterHomePageState extends State<ShutterHomePage>
                       glowOpacity: _isConnected ? 0.3 : 0,
                     ),
                   ),
-                  // Label
                   Positioned(
-                    bottom: isUp ? 15 : null,
-                    top: isUp ? null : 15,
+                    bottom: isUp ? height * 0.08 : null,
+                    top: isUp ? null : height * 0.08,
                     child: Text(
                       label,
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: (height * 0.083).clamp(8.0, 12.0),
                         fontWeight: FontWeight.w700,
                         letterSpacing: 3,
                         color: _isConnected
@@ -571,7 +542,7 @@ class _ShutterHomePageState extends State<ShutterHomePage>
 
   Widget _buildBottomBar() {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
@@ -588,7 +559,7 @@ class _ShutterHomePageState extends State<ShutterHomePage>
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: isActive
                 ? const Color(0xFF6366F1).withValues(alpha: 0.2)
@@ -597,7 +568,7 @@ class _ShutterHomePageState extends State<ShutterHomePage>
           ),
           child: Icon(
             icon,
-            size: 24,
+            size: 22,
             color: isActive ? const Color(0xFF818CF8) : Colors.grey[600],
           ),
         ),
@@ -605,7 +576,7 @@ class _ShutterHomePageState extends State<ShutterHomePage>
         Text(
           label,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 10,
             fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
             color: isActive ? const Color(0xFF818CF8) : Colors.grey[600],
           ),
@@ -625,62 +596,6 @@ class ArrowPainter extends CustomPainter {
     required this.gradientColors,
     required this.glowOpacity,
   });
-
-  // @override
-  // void paint(Canvas canvas, Size size) {
-  //   final paint = Paint()
-  //     ..shader = LinearGradient(
-  //       begin: isUp ? Alignment.bottomCenter : Alignment.topCenter,
-  //       end: isUp ? Alignment.topCenter : Alignment.bottomCenter,
-  //       colors: gradientColors,
-  //     ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-  //   final path = Path();
-
-  //   if (isUp) {
-  //     // Chevron pointing up
-  //     path.moveTo(size.width * 0.5, 0);
-  //     path.lineTo(size.width * 0.85, size.height * 0.45);
-  //     path.lineTo(size.width * 0.65, size.height * 0.45);
-  //     path.lineTo(size.width * 0.65, size.height * 0.75);
-  //     path.lineTo(size.width * 0.35, size.height * 0.75);
-  //     path.lineTo(size.width * 0.35, size.height * 0.45);
-  //     path.lineTo(size.width * 0.15, size.height * 0.45);
-  //     path.close();
-  //   } else {
-  //     // Chevron pointing down
-  //     path.moveTo(size.width * 0.35, size.height * 0.25);
-  //     path.lineTo(size.width * 0.65, size.height * 0.25);
-  //     path.lineTo(size.width * 0.65, size.height * 0.55);
-  //     path.lineTo(size.width * 0.85, size.height * 0.55);
-  //     path.lineTo(size.width * 0.5, size.height);
-  //     path.lineTo(size.width * 0.15, size.height * 0.55);
-  //     path.lineTo(size.width * 0.35, size.height * 0.55);
-  //     path.close();
-  //   }
-
-  //   // Draw shadow/glow
-  //   if (glowOpacity > 0) {
-  //     canvas.drawShadow(path, gradientColors[0], 15, false);
-  //   }
-
-  //   canvas.drawPath(path, paint);
-
-  //   // Add edge highlight
-  //   final highlightPaint = Paint()
-  //     ..style = PaintingStyle.stroke
-  //     ..strokeWidth = 1.5
-  //     ..shader = LinearGradient(
-  //       begin: isUp ? Alignment.bottomCenter : Alignment.topCenter,
-  //       end: isUp ? Alignment.topCenter : Alignment.bottomCenter,
-  //       colors: [
-  //         Colors.white.withValues(alpha: 0.3),
-  //         Colors.white.withValues(alpha: 0.0),
-  //       ],
-  //     ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-  //   canvas.drawPath(path, highlightPaint);
-  // }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -706,7 +621,6 @@ class ArrowPainter extends CustomPainter {
       path.close();
     }
 
-    // Soft blur shadow layers
     for (int i = 3; i >= 0; i--) {
       final shadowPaint = Paint()
         ..color = gradientColors[0].withValues(alpha: 0.08 * (4 - i))
@@ -714,13 +628,11 @@ class ArrowPainter extends CustomPainter {
       canvas.drawPath(path, shadowPaint);
     }
 
-    // Inner soft glow
     final innerGlowPaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.05)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
     canvas.drawPath(path, innerGlowPaint);
 
-    // Main gradient fill
     final paint = Paint()
       ..shader = LinearGradient(
         begin: isUp ? Alignment.bottomCenter : Alignment.topCenter,
@@ -729,7 +641,6 @@ class ArrowPainter extends CustomPainter {
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawPath(path, paint);
 
-    // Edge highlight
     final highlightPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5
