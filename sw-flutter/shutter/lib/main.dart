@@ -47,6 +47,7 @@ class _ShutterHomePageState extends State<ShutterHomePage>
   late AnimationController _pulseController;
   late AnimationController _upArrowController;
   late AnimationController _downArrowController;
+  late AnimationController _stopButtonController;
 
   @override
   void initState() {
@@ -70,6 +71,11 @@ class _ShutterHomePageState extends State<ShutterHomePage>
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
+
+    _stopButtonController = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
   }
 
   @override
@@ -77,6 +83,7 @@ class _ShutterHomePageState extends State<ShutterHomePage>
     _pulseController.dispose();
     _upArrowController.dispose();
     _downArrowController.dispose();
+    _stopButtonController.dispose();
     super.dispose();
   }
 
@@ -188,6 +195,9 @@ class _ShutterHomePageState extends State<ShutterHomePage>
   }
 
   void _onStopPressed() {
+    _stopButtonController.forward().then(
+      (_) => _stopButtonController.reverse(),
+    );
     _sendCommand([0x00]);
   }
 
@@ -421,32 +431,7 @@ class _ShutterHomePageState extends State<ShutterHomePage>
               height: buttonHeight,
             ),
             SizedBox(height: spacing),
-            GestureDetector(
-              onTap: _onStopPressed,
-              child: Container(
-                width: stopButtonSize,
-                height: stopButtonSize,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF27272A),
-                  border: Border.all(color: const Color(0xFF3F3F46), width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.stop_rounded,
-                    size: stopButtonSize * 0.45,
-                    color: const Color(0xFFFAFAFA),
-                  ),
-                ),
-              ),
-            ),
+            _buildStopButton(stopButtonSize),
             SizedBox(height: spacing),
             _buildArrowButton(
               icon: Icons.keyboard_arrow_down_rounded,
@@ -460,6 +445,80 @@ class _ShutterHomePageState extends State<ShutterHomePage>
           ],
         );
       },
+    );
+  }
+
+  Widget _buildStopButton(double size) {
+    return GestureDetector(
+      onTap: _onStopPressed,
+      child: AnimatedBuilder(
+        animation: _stopButtonController,
+        builder: (context, child) {
+          final scale = 1.0 - (_stopButtonController.value * 0.15);
+          final glowIntensity = _stopButtonController.value;
+
+          return Transform.scale(
+            scale: scale,
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color.lerp(
+                      const Color(0xFF27272A),
+                      const Color(0xFFEF4444),
+                      glowIntensity,
+                    )!,
+                    Color.lerp(
+                      const Color(0xFF3F3F46),
+                      const Color(0xFFDC2626),
+                      glowIntensity,
+                    )!,
+                  ],
+                ),
+                border: Border.all(
+                  color: Color.lerp(
+                    const Color(0xFF3F3F46),
+                    const Color(0xFFF87171),
+                    glowIntensity,
+                  )!,
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 15,
+                    offset: Offset(0, 5 * (1 - glowIntensity)),
+                  ),
+                  if (glowIntensity > 0)
+                    BoxShadow(
+                      color: const Color(
+                        0xFFEF4444,
+                      ).withValues(alpha: 0.5 * glowIntensity),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                ],
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.stop_rounded,
+                  size: size * 0.45,
+                  color: Color.lerp(
+                    const Color(0xFFFAFAFA),
+                    Colors.white,
+                    glowIntensity,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
